@@ -24,15 +24,23 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import urllib2
+import re
 from bs4 import BeautifulSoup
+from lib.manga import Manga
 
 def main():
 	soup = BeautifulSoup(urllib2.urlopen('http://www.mangapanda.com').read())
 
 	for section in soup('table', {'class' : 'updates'}):
 		for row in section.findAll('tr'):
-			tds = row('td')
-			print tds[1].a.strong.string
-
+			chapters = row('td')[1].findAll('a', {'class' : 'chaptersrec'})
+			for chapter in chapters:
+				link = chapter['href']
+				matchObj = re.search('^/(.*)/(.*)$', link)
+				name = matchObj.group(1)
+				chapter = matchObj.group(2)
+				manga = Manga(name, chapter)
+				print manga.Name, manga.Chapter
+				
 if __name__ == "__main__":
     main()
