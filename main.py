@@ -25,10 +25,11 @@
 
 import urllib2
 import re
+import os
 from bs4 import BeautifulSoup
 from lib.manga import Manga
 
-def main():
+def get_updates_list():
 	soup = BeautifulSoup(urllib2.urlopen('http://www.mangapanda.com').read())
 
 	for section in soup('table', {'class' : 'updates'}):
@@ -42,5 +43,11 @@ def main():
 				manga = Manga(name, chapter)
 				print manga.Name, manga.Chapter
 				
+def get_manga_list():
+	path = os.path.dirname(__file__)
+	conf = os.path.join(path, "conf", "list")
+	mangas = open(conf, 'r').read().splitlines()
+	return mangas
+				
 if __name__ == "__main__":
-    main()
+	print get_manga_list()
