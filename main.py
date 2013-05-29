@@ -27,27 +27,32 @@ import urllib2
 import re
 import os
 from bs4 import BeautifulSoup
-from lib.manga import Manga
+		
+class MangaUpdatesParser:
+	def get_updates_list(self):
+		soup = BeautifulSoup(urllib2.urlopen('http://www.mangapanda.com').read())
 
-def get_updates_list():
-	soup = BeautifulSoup(urllib2.urlopen('http://www.mangapanda.com').read())
-
-	for section in soup('table', {'class' : 'updates'}):
-		for row in section.findAll('tr'):
-			chapters = row('td')[1].findAll('a', {'class' : 'chaptersrec'})
-			for chapter in chapters:
-				link = chapter['href']
-				matchObj = re.search('^/(.*)/(.*)$', link)
-				name = matchObj.group(1)
-				chapter = matchObj.group(2)
-				manga = Manga(name, chapter)
-				print manga.Name, manga.Chapter
-				
-def get_manga_list():
-	path = os.path.dirname(__file__)
-	conf = os.path.join(path, "conf", "list")
-	mangas = open(conf, 'r').read().splitlines()
-	return mangas
+		for section in soup('table', {'class' : 'updates'}):
+			for row in section.findAll('tr'):
+				chapters = row('td')[1].findAll('a', {'class' : 'chaptersrec'})
+				manga_list = self.get_favorite_list()
+				for chapter in chapters:
+					link = chapter['href']
+					matchObj = re.search('^/(.*)/(.*)$', link)
+					name = matchObj.group(1)
+					chapter_num = matchObj.group(2)
+					if name in manga_list:
+						print chapter_num
+					
+	def get_favorite_list(self):
+		path = os.path.dirname(__file__)
+		conf = os.path.join(path, "conf", "list")
+		mangas = [x.lower() for x in open(conf, 'r').read().splitlines()]
+		return mangas
+		
+class HaekyTweetBot:
+	def __init__(self):
+		self.name = ""
 				
 if __name__ == "__main__":
-	print get_manga_list()
+	MangaUpdatesParser().get_updates_list()
