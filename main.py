@@ -37,7 +37,32 @@ class TweetBotConfig:
 		self.config.readfp(open('application.ini'))
 		
 	def get_favorites_list(self):
-		return [x for x in self.config.get('Manga', 'List').splitlines()]
+		list = []
+		for x in self.config.get('Manga', 'list').splitlines():
+			chapter_num = re.findall('[a-zA-z0-9 ]* ([0-9].*)', x)
+			chapter_name = ""
+			if len(chapter_num) > 0:
+				chapter_name = x.replace(' ' + chapter_num[0], '')
+				chapter_num = chapter_num[0]
+			else: 
+				chapter_name = x
+				chapter_num = 0
+			list.append([chapter_name, chapter_num])
+		return list
+		
+	def update_favorites_list(self, chapter_name, chapter_num):
+		favorites_list = self.get_favorites_list()
+		output = ""
+		for favorite in favorites_list:
+			current = ' '.join(str(x) for x in favorite)
+			if chapter_name in favorite:
+				current = chapter_name + ' ' + chapter_num + '\n\t'
+			output += current + '\n'
+		self.config.set('Manga', 'list', output)
+		
+		with open('application.ini', 'wb') as file:
+			self.config.write(file)
+			
 	
 	def get_twitter_key(self, key):
 		return self.config.get('Twitter', key)
@@ -47,27 +72,27 @@ class TweetBotConfig:
 	
 class MangaUpdatesParser:
 	def get_updates_list(self):
-		soup = BeautifulSoup(urllib2.urlopen('http://www.mangapanda.com').read())
-		list = []
+		url = 'http://www.mangapanda.com'
+		soup = BeautifulSoup(urllib2.urlopen(url).read())
 		for section in soup('table', {'class' : 'updates'}):
 			for row in section.findAll('tr'):
-				name = row('td')[1].a.strong.string
+				chapter_name = row('td')[1].a.strong.string
 				chapters = row('td')[1].findAll('a', {'class' : 'chaptersrec'})
-				manga_list = TweetBotConfig().get_favorites_list()
+				favorites_list = TweetBotConfig().get_favorites_list()
 				for chapter in chapters:
 					link = chapter['href']
 					matchObj = re.search('^/(.*)/(.*)$', link)
 					chapter_num = matchObj.group(2)
-					for manga in manga_list:
-						if name in manga:
-							list.append([name,chapter_num])
+					for favorite in favorites_list:
+						if chapter_name in favorite:
+							if chapter_num > favorite[1]:
+								print url + link
+								TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
 							
-		return list
 		
 class HaekyTweetBot:
 	def __init__(self):
 		self.name = ""
 				
 if __name__ == "__main__":
-	print TweetBotConfig().get_favorites_list()
-	print MangaUpdatesParser().get_updates_list()
+	MangaUpdatesParser().get_updates_list()
