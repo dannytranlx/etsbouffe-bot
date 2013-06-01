@@ -26,8 +26,25 @@
 import urllib2
 import re
 import os
+import twitter
+import bitly
+import ConfigParser
 from bs4 import BeautifulSoup
+
+class TweetBotConfig:
+	def __init__(self):
+		self.config = ConfigParser.ConfigParser(allow_no_value=True)
+		self.config.readfp(open('application.ini'))
 		
+	def get_favorites_list(self):
+		return self.config.get('Manga', 'List').splitlines()
+	
+	def get_twitter_key(self, key):
+		return self.config.get('Twitter', key)
+		
+	def get_bitly_key(self, key):
+		return self.config.get('Bitly', key)
+	
 class MangaUpdatesParser:
 	def get_updates_list(self):
 		soup = BeautifulSoup(urllib2.urlopen('http://www.mangapanda.com').read())
@@ -43,16 +60,10 @@ class MangaUpdatesParser:
 					chapter_num = matchObj.group(2)
 					if name in manga_list:
 						print chapter_num
-					
-	def get_favorite_list(self):
-		path = os.path.dirname(__file__)
-		conf = os.path.join(path, "conf", "list")
-		mangas = [x.lower() for x in open(conf, 'r').read().splitlines()]
-		return mangas
 		
 class HaekyTweetBot:
 	def __init__(self):
 		self.name = ""
 				
 if __name__ == "__main__":
-	MangaUpdatesParser().get_updates_list()
+	print TweetBotConfig().get_twitter_key('Consumer Key');
