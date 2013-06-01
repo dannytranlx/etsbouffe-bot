@@ -67,8 +67,8 @@ class TweetBotConfig:
 	def get_twitter_key(self, key):
 		return self.config.get('Twitter', key)
 		
-	def get_bitly_key(self, key):
-		return self.config.get('Bitly', key)
+	def get_bitly_key(self):
+		return self.config.get('Bitly', 'key')
 	
 class MangaUpdatesParser:
 	def get_updates_list(self):
@@ -86,9 +86,17 @@ class MangaUpdatesParser:
 					for favorite in favorites_list:
 						if chapter_name in favorite:
 							if chapter_num > favorite[1]:
-								print url + link
-								TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
+								print BitlyAPI().shorten(url + link)
+								#TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
 							
+class BitlyAPI:
+	def __init__(self):
+		key = TweetBotConfig().get_bitly_key()
+		self.api = bitly.Api(login='haeky', apikey=key)
+		
+	def shorten(self, url):
+		print(url)
+		return self.api.shorten(url)
 		
 class HaekyTweetBot:
 	def __init__(self):
