@@ -33,11 +33,11 @@ from bs4 import BeautifulSoup
 
 class TweetBotConfig:
 	def __init__(self):
-		self.config = ConfigParser.ConfigParser(allow_no_value=True)
+		self.config = ConfigParser.ConfigParser(allow_no_value=1)
 		self.config.readfp(open('application.ini'))
 		
 	def get_favorites_list(self):
-		return self.config.get('Manga', 'List').splitlines()
+		return [x for x in self.config.get('Manga', 'List').splitlines()]
 	
 	def get_twitter_key(self, key):
 		return self.config.get('Twitter', key)
@@ -48,22 +48,26 @@ class TweetBotConfig:
 class MangaUpdatesParser:
 	def get_updates_list(self):
 		soup = BeautifulSoup(urllib2.urlopen('http://www.mangapanda.com').read())
-
+		list = []
 		for section in soup('table', {'class' : 'updates'}):
 			for row in section.findAll('tr'):
+				name = row('td')[1].a.strong.string
 				chapters = row('td')[1].findAll('a', {'class' : 'chaptersrec'})
-				manga_list = self.get_favorite_list()
+				manga_list = TweetBotConfig().get_favorites_list()
 				for chapter in chapters:
 					link = chapter['href']
 					matchObj = re.search('^/(.*)/(.*)$', link)
-					name = matchObj.group(1)
 					chapter_num = matchObj.group(2)
-					if name in manga_list:
-						print chapter_num
+					for manga in manga_list:
+						if name in manga:
+							list.append([name,chapter_num])
+							
+		return list
 		
 class HaekyTweetBot:
 	def __init__(self):
 		self.name = ""
 				
 if __name__ == "__main__":
-	print TweetBotConfig().get_twitter_key('Consumer Key');
+	print TweetBotConfig().get_favorites_list()
+	print MangaUpdatesParser().get_updates_list()
