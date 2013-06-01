@@ -70,24 +70,23 @@ class TweetBotConfig:
 	def get_bitly_key(self):
 		return self.config.get('Bitly', 'key')
 	
-class MangaUpdatesParser:
-	def get_updates_list(self):
-		url = 'http://www.mangapanda.com'
-		soup = BeautifulSoup(urllib2.urlopen(url).read())
+class MangaWebParser:
+	def __init__(self):
+		self.url = 'http://www.mangapanda.com'
+	def find_updates(self):
+		soup = BeautifulSoup(urllib2.urlopen(self.url).read())
 		for section in soup('table', {'class' : 'updates'}):
 			for row in section.findAll('tr'):
 				chapter_name = row('td')[1].a.strong.string
-				chapters = row('td')[1].findAll('a', {'class' : 'chaptersrec'})
+				hyperlink = row('td')[1].findAll('a', {'class' : 'chaptersrec'})
 				favorites_list = TweetBotConfig().get_favorites_list()
-				for chapter in chapters:
-					link = chapter['href']
-					matchObj = re.search('^/(.*)/(.*)$', link)
-					chapter_num = matchObj.group(2)
-					for favorite in favorites_list:
-						if chapter_name in favorite:
-							if chapter_num > favorite[1]:
-								print BitlyAPI().shorten(url + link)
-								#TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
+				repository = hyperlink[0]['href']
+				matchObj = re.search('^/(.*)/(.*)$', repository)
+				chapter_num = matchObj.group(2)
+				for favorite in favorites_list:
+					if chapter_name in favorite and chapter_num > favorite[1]:
+						print BitlyAPI().shorten(self.url + repository)
+						#TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
 							
 class BitlyAPI:
 	def __init__(self):
@@ -95,12 +94,20 @@ class BitlyAPI:
 		self.api = bitly.Api(login='haeky', apikey=key)
 		
 	def shorten(self, url):
-		print(url)
 		return self.api.shorten(url)
 		
-class HaekyTweetBot:
+class TwitterAPI:
 	def __init__(self):
-		self.name = ""
+		consumer_key = TweetBotConfig().get_twitter_key('consumer key')
+		consumer_secret = TweetBotConfig().get_twitter_key('consumer secret')
+		access_token_key = TweetBotConfig().get_twitter_key('access token key')
+		access_token_secret = TweetBotConfig().get_twitter_key('access token secret')
+		self.api = twitter.Api(consumer_key, consumer_secret, access_token_key, access_token_secret)
+		print self.api.VerifyCredentials()
+	
+	def post_update(self, message):
+		self.api.PostUpdate(message)
 				
 if __name__ == "__main__":
-	MangaUpdatesParser().get_updates_list()
+	MangaWebParser().find_updates()
+	TwitterAPI().post_update('TEST')
