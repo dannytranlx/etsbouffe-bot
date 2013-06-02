@@ -41,14 +41,9 @@ class TweetBotConfig:
 	def get_favorites_list(self):
 		list = []
 		for x in self.config.get('Manga', 'list').splitlines():
-			chapter_num = re.findall('[a-zA-z0-9 ]* ([0-9].*)', x)
-			chapter_name = ""
-			if len(chapter_num) > 0:
-				chapter_name = x.replace(' ' + chapter_num[0], '')
-				chapter_num = chapter_num[0]
-			else: 
-				chapter_name = x
-				chapter_num = 0
+			match = re.findall('[a-zA-z0-9 ]* ([0-9].*)', x)
+			chapter_name = x.replace(' ' + match[0], '') if len(match) > 0 else x
+			chapter_num = match[0] if len(match) > 0 else 0
 			list.append([chapter_name, chapter_num])
 		return list
 		
@@ -94,8 +89,12 @@ class TweetBotConfig:
 		else:
 			print chapter_name + " has not been found in the list"
 		
-	def get_twitter_key(self, key):
-		return self.config.get('Twitter', key)
+	def get_twitter_key(self):
+		consumer_key = self.config.get('Twitter', 'consumer key')
+		consumer_secret = self.config.get('Twitter', 'consumer secret')
+		access_token_key = self.config.get('Twitter', 'access token key')
+		access_token_secret = self.config.get('Twitter', 'access token secret')
+		return consumer_key, consumer_secret, access_token_key, access_token_secret
 		
 	def get_bitly_key(self):
 		return self.config.get('Bitly', 'key')
@@ -154,19 +153,18 @@ class TweetBotApp:
 class MangaWebParser:
 	def __init__(self):
 		self.url = 'http://www.mangapanda.com'
+		
 	def find_updates(self):
 		soup = BeautifulSoup(urllib2.urlopen(self.url).read())
 		for section in soup('table', {'class' : 'updates'}):
 			for row in section.findAll('tr'):
-				chapter_name = row('td')[1].a.strong.string
 				hyperlink = row('td')[1].findAll('a', {'class' : 'chaptersrec'})
-				favorites_list = TweetBotConfig().get_favorites_list()
-				repository = hyperlink[0]['href']
-				matchObj = re.search('^/(.*)/(.*)$', repository)
-				chapter_num = matchObj.group(2)
-				for favorite in favorites_list:
+				chapter_name = row('td')[1].a.strong.string
+				chapter_num = re.search('^/(.*)/(.*)$', hyperlink[0]['href']).group(2)
+				for favorite in TweetBotConfig().get_favorites_list():
 					if chapter_name in favorite and chapter_num > favorite[1]:
-						#TwitterAPI().post_update(chapter_name, chapter_num, BitlyAPI().shorten(self.url + repository))
+						url = BitlyAPI().shorten(self.url + hyperlink[0]['href'])
+						TwitterAPI().post_update(chapter_name, chapter_num, url)
 						TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
 							
 class BitlyAPI:
@@ -179,10 +177,7 @@ class BitlyAPI:
 		
 class TwitterAPI:
 	def __init__(self):
-		consumer_key = TweetBotConfig().get_twitter_key('consumer key')
-		consumer_secret = TweetBotConfig().get_twitter_key('consumer secret')
-		access_token_key = TweetBotConfig().get_twitter_key('access token key')
-		access_token_secret = TweetBotConfig().get_twitter_key('access token secret')
+		consumer_key, consumer_secret, access_token_key, access_token_secret = TweetBotConfig().get_twitter_key()
 		self.twitter = Twitter(auth=OAuth(access_token_key, access_token_secret, consumer_key, consumer_secret))
 		
 	def post_update(self, chapter_name, chapter_num, url):
