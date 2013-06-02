@@ -52,29 +52,55 @@ class TweetBotConfig:
 			list.append([chapter_name, chapter_num])
 		return list
 		
-	def update_favorites_list(self, chapter_name, chapter_num):
-		favorites_list = self.get_favorites_list()
-		output = '\n'.join(' '.join(str(x) for x in favorite) for favorite in favorites_list)
-		output = re.sub(chapter_name + ' (.*)', chapter_name + ' ' + str(chapter_num), output)
-		self.config.set('Manga', 'list', output)
-		with open('application.ini', 'wb') as file:
-			self.config.write(file)
-	
-	def add_favorites_list(self, chapter_name):
-		favorites_list = self.get_favorites_list()
-		favorites_list.append([chapter_name, 0])
-		output = '\n'.join(' '.join(str(x) for x in favorite) for favorite in favorites_list)
+	def output_manga_list(self, output):
 		self.config.set('Manga', 'list', output)
 		
 		with open('application.ini', 'wb') as file:
 			self.config.write(file)
+		
+	def update_favorites_list(self, chapter_name, chapter_num):
+		favorites_list = self.get_favorites_list()
+		output = '\n'.join(' '.join(str(x) for x in favorite) for favorite in favorites_list)
+		output = re.sub(chapter_name + ' (.*)', chapter_name + ' ' + str(chapter_num), output)
+		self.output_manga_list(output)
+	
+	def add_favorites_list(self, chapter_name):
+		favorites_list = self.get_favorites_list()
+		add_index = self.get_manga_index(chapter_name)
+		if add_index == -1:
+			favorites_list.append([chapter_name, 0])
+			output = '\n'.join(' '.join(str(x) for x in favorite) for favorite in favorites_list)
+			self.output_manga_list(output)
+		else:
+			print chapter_name + " is already in the list"
+	
+	def get_manga_index(self, chapter_name):
+		favorites_list = self.get_favorites_list()
+		index = -1
+		for favorite in favorites_list:
+			if chapter_name in favorite:
+				index = favorites_list.index(favorite)
+				break
+		
+		return index
+	
+	def remove_favorites_list(self, chapter_name):
+		favorites_list = self.get_favorites_list()
+		remove_index = self.get_manga_index(chapter_name)
+		if remove_index >= 0:
+			favorites_list.pop(remove_index)
+			output = '\n'.join(' '.join(str(x) for x in favorite) for favorite in favorites_list)
+			self.output_manga_list(output)
+		else:
+			print chapter_name + " has not been found in the list"
+		
 	def get_twitter_key(self, key):
 		return self.config.get('Twitter', key)
 		
 	def get_bitly_key(self):
 		return self.config.get('Bitly', 'key')
 	
-class MangaTweetBotApp:
+class TweetBotApp:
 	def __init__(self):
 		self.argparse = self.build_args()
 		
@@ -99,6 +125,11 @@ class MangaTweetBotApp:
 		parser_fetch = subparsers.add_parser('fetch', help='Fetch all the updates from mangapanda')
 		parser_fetch.set_defaults(func=self.command_fetch)
 		
+		#Remove
+		parser_remove = subparsers.add_parser('remove', help='Remove a manga from the watch list')
+		parser_remove.add_argument('manga_name', action="store", nargs="?", type=str, help='Name of the manga you want to remove from the list')
+		parser_remove.set_defaults(func=self.command_remove)
+		
 		return parser
 		
 	def command_list(self, args):
@@ -108,9 +139,15 @@ class MangaTweetBotApp:
 	def command_fetch(self, args):
 		MangaWebParser().find_updates()
 		
+	def command_remove(self, args):
+		if args.manga_name:
+			TweetBotConfig().remove_favorites_list(args.manga_name)
+		else:
+			print self.argparse.print_help()
+		
 	def command_add(self, args):
 		if args.manga_name:
-			TweetBotConfig().add_favorites_list(chapter_name)
+			TweetBotConfig().add_favorites_list(args.manga_name)
 		else:
 			print self.argparse.print_help()
 		
@@ -153,4 +190,4 @@ class TwitterAPI:
 		self.twitter.statuses.update(status=message)
 				
 if __name__ == "__main__":
-	MangaTweetBotApp().run()
+	TweetBotApp().run()
