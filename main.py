@@ -30,6 +30,7 @@ from twitter import *
 import oauth2
 import bitly
 import ConfigParser
+import argparse
 from bs4 import BeautifulSoup
 
 class TweetBotConfig:
@@ -53,24 +54,66 @@ class TweetBotConfig:
 		
 	def update_favorites_list(self, chapter_name, chapter_num):
 		favorites_list = self.get_favorites_list()
-		output = ""
-		for favorite in favorites_list:
-			current = ' '.join(str(x) for x in favorite)
-			if chapter_name in favorite:
-				current = chapter_name + ' ' + chapter_num + '\n\t'
-			output += current + '\n'
+		output = '\n'.join(' '.join(str(x) for x in favorite) for favorite in favorites_list)
+		output = re.sub(chapter_name + ' (.*)', chapter_name + ' ' + str(chapter_num), output)
+		self.config.set('Manga', 'list', output)
+		with open('application.ini', 'wb') as file:
+			self.config.write(file)
+	
+	def add_favorites_list(self, chapter_name):
+		favorites_list = self.get_favorites_list()
+		favorites_list.append([chapter_name, 0])
+		output = '\n'.join(' '.join(str(x) for x in favorite) for favorite in favorites_list)
 		self.config.set('Manga', 'list', output)
 		
 		with open('application.ini', 'wb') as file:
 			self.config.write(file)
-			
-	
 	def get_twitter_key(self, key):
 		return self.config.get('Twitter', key)
 		
 	def get_bitly_key(self):
 		return self.config.get('Bitly', 'key')
 	
+class MangaTweetBotApp:
+	def __init__(self):
+		self.argparse = self.build_args()
+		
+	def run(self):
+		args = self.argparse.parse_args()
+		args.func(args);
+		
+	def build_args(self):
+		parser = argparse.ArgumentParser(description="This is a twitter bot that will tweet when a new chapter comes out")
+		subparsers = parser.add_subparsers(dest="command", help='Sub-commands help')
+		
+		#List
+		parser_list = subparsers.add_parser('list', help='List all the mangas that are being watched')
+		parser_list.set_defaults(func=self.command_list)
+		
+		#Add
+		parser_add = subparsers.add_parser('add', help='Add a new manga to the watch list')
+		parser_add.add_argument('manga_name', action="store", nargs="?", type=str, help='Name of the manga you want to add to the list')
+		parser_add.set_defaults(func=self.command_add)
+		
+		#Fetch
+		parser_fetch = subparsers.add_parser('fetch', help='Fetch all the updates from mangapanda')
+		parser_fetch.set_defaults(func=self.command_fetch)
+		
+		return parser
+		
+	def command_list(self, args):
+		for favorite in TweetBotConfig().get_favorites_list():
+			print favorite[0] + ' ' + favorite[1]
+			
+	def command_fetch(self, args):
+		MangaWebParser().find_updates()
+		
+	def command_add(self, args):
+		if args.manga_name:
+			TweetBotConfig().add_favorites_list(chapter_name)
+		else:
+			print self.argparse.print_help()
+		
 class MangaWebParser:
 	def __init__(self):
 		self.url = 'http://www.mangapanda.com'
@@ -86,7 +129,7 @@ class MangaWebParser:
 				chapter_num = matchObj.group(2)
 				for favorite in favorites_list:
 					if chapter_name in favorite and chapter_num > favorite[1]:
-						TwitterAPI().post_update(chapter_name, chapter_num, BitlyAPI().shorten(self.url + repository))
+						#TwitterAPI().post_update(chapter_name, chapter_num, BitlyAPI().shorten(self.url + repository))
 						TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
 							
 class BitlyAPI:
@@ -110,4 +153,4 @@ class TwitterAPI:
 		self.twitter.statuses.update(status=message)
 				
 if __name__ == "__main__":
-	MangaWebParser().find_updates()
+	MangaTweetBotApp().run()
