@@ -26,7 +26,8 @@
 import urllib2
 import re
 import os
-import twitter
+from twitter import * 
+import oauth2
 import bitly
 import ConfigParser
 from bs4 import BeautifulSoup
@@ -85,8 +86,8 @@ class MangaWebParser:
 				chapter_num = matchObj.group(2)
 				for favorite in favorites_list:
 					if chapter_name in favorite and chapter_num > favorite[1]:
-						print BitlyAPI().shorten(self.url + repository)
-						#TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
+						TwitterAPI().post_update(chapter_name, chapter_num, BitlyAPI().shorten(self.url + repository))
+						TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
 							
 class BitlyAPI:
 	def __init__(self):
@@ -102,12 +103,11 @@ class TwitterAPI:
 		consumer_secret = TweetBotConfig().get_twitter_key('consumer secret')
 		access_token_key = TweetBotConfig().get_twitter_key('access token key')
 		access_token_secret = TweetBotConfig().get_twitter_key('access token secret')
-		self.api = twitter.Api(consumer_key, consumer_secret, access_token_key, access_token_secret)
-		print self.api.VerifyCredentials()
-	
-	def post_update(self, message):
-		self.api.PostUpdate(message)
+		self.twitter = Twitter(auth=OAuth(access_token_key, access_token_secret, consumer_key, consumer_secret))
+		
+	def post_update(self, chapter_name, chapter_num, url):
+		message = chapter_name + ' ' + chapter_num + ' is now out [' + url + ']'
+		self.twitter.statuses.update(status=message)
 				
 if __name__ == "__main__":
 	MangaWebParser().find_updates()
-	TwitterAPI().post_update('TEST')
