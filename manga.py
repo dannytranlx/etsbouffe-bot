@@ -36,6 +36,8 @@ from bs4 import BeautifulSoup
 class TweetBotConfig:
 	def __init__(self):
 		self.config = ConfigParser.ConfigParser(allow_no_value=1)
+		path = os.path.dirname(__file__)
+		os.chdir(path)
 		self.config.readfp(open('application.ini'))
 		
 	def get_favorites_list(self):
