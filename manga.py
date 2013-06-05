@@ -25,20 +25,22 @@
 
 import urllib2
 import re
-import os
-from twitter import * 
+import os 
 import oauth2
 import bitly
-import CconfigParser
+import ConfigParser
 import argparse
+from twitter import *
+from datetime import datetime
 from bs4 import BeautifulSoup
 
 class TweetBotConfig:
 	def __init__(self):
+		path = os.path.dirname(os.path.realpath(__file__))
+		if path:
+			os.chdir(path)
 		self.config = ConfigParser.ConfigParser(allow_no_value=1)
-		path = os.path.dirname(os.path.realpath(_file__))
-		os.chdir(path)
-		self.config.readfp(open('application.ini'))
+		self.config.readfp(open('application.ini', 'a+'))
 		
 	def get_favorites_list(self):
 		list = []
@@ -100,6 +102,20 @@ class TweetBotConfig:
 		
 	def get_bitly_key(self):
 		return self.config.get('Bitly', 'key')
+		
+class TweetBotLog:
+	def __init__(self):
+		path = os.path.dirname(os.path.realpath(__file__))
+		if path:
+			os.chdir(path)
+		self.file = open('application.log', 'a+')
+		
+	def __del__(self):
+		self.file.close()
+		
+	def write_log(self, message):
+		d = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+		self.file.write(d + ':\t\t' + message + '\n')
 	
 class TweetBotApp:
 	def __init__(self):
