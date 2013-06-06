@@ -173,18 +173,23 @@ class MangaWebParser:
 		self.url = 'http://www.mangapanda.com'
 		
 	def find_updates(self):
-		soup = BeautifulSoup(urllib2.urlopen(self.url).read())
-		for section in soup('table', {'class' : 'updates'}):
-			for row in section.findAll('tr'):
-				hyperlink = row('td')[1].find('a', {'class' : 'chaptersrec'})
-				chapter_name = row('td')[1].a.strong.string
-				if hyperlink:
-					chapter_num = re.search('^/(.*)/(.*)$', hyperlink['href']).group(2)
-					for favorite in TweetBotConfig().get_favorites_list():
-						if chapter_name in favorite and chapter_num > favorite[1]:
-							url = BitlyAPI().shorten(self.url + hyperlink['href'])
-							TwitterAPI().post_update(chapter_name, chapter_num, url)
-							TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
+		webparser = []
+		try:
+			webparser = BeautifulSoup(urllib2.urlopen(self.url).read())
+		except:
+			TweetBotLog().write_log('Could not connect to Mangapanda')
+		if webparser:
+			for section in webparser('table', {'class' : 'updates'}):
+				for row in section.findAll('tr'):
+					hyperlink = row('td')[1].find('a', {'class' : 'chaptersrec'})
+					chapter_name = row('td')[1].a.strong.string
+					if hyperlink:
+						chapter_num = re.search('^/(.*)/(.*)$', hyperlink['href']).group(2)
+						for favorite in TweetBotConfig().get_favorites_list():
+							if chapter_name in favorite and chapter_num > favorite[1]:
+								url = BitlyAPI().shorten(self.url + hyperlink['href'])
+								TwitterAPI().post_update(chapter_name, chapter_num, url)
+								TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
 							
 class BitlyAPI:
 	def __init__(self):
