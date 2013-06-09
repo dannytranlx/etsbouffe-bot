@@ -154,7 +154,8 @@ class TweetBotApp:
 			print favorite[0] + ' ' + favorite[1]
 			
 	def command_fetch(self, args):
-		MangaWebParser().find_updates()
+		#MangaWebParser().find_updates_mangapanda()
+		MangaWebParser().find_updates_mangastream()
 		
 	def command_remove(self, args):
 		if args.manga_name:
@@ -170,26 +171,46 @@ class TweetBotApp:
 		
 class MangaWebParser:
 	def __init__(self):
-		self.url = 'http://www.mangapanda.com'
+		self.url_mangapanda = 'http://www.mangapanda.com'
+		self.url_mangastream = 'http://www.mangastream.com'
 		
-	def find_updates(self):
+	def find_updates_mangapanda(self):
 		webparser = []
 		try:
-			webparser = BeautifulSoup(urllib2.urlopen(self.url).read())
+			webparser = BeautifulSoup(urllib2.urlopen(self.url_mangapanda).read())
 		except:
 			TweetBotLog().write_log('Could not connect to Mangapanda')
 		if webparser:
 			for section in webparser('table', {'class' : 'updates'}):
 				for row in section.findAll('tr'):
 					hyperlink = row('td')[1].find('a', {'class' : 'chaptersrec'})
-					chapter_name = row('td')[1].a.strong.string
 					if hyperlink:
+						chapter_name = row('td')[1].a.strong.string
 						chapter_num = re.search('^/(.*)/(.*)$', hyperlink['href']).group(2)
-						for favorite in TweetBotConfig().get_favorites_list():
-							if chapter_name in favorite and chapter_num > favorite[1]:
-								url = BitlyAPI().shorten(self.url + hyperlink['href'])
-								TwitterAPI().post_update(chapter_name, chapter_num, url)
-								TweetBotConfig().update_favorites_list(chapter_name, chapter_num)
+						url = self.url_mangapanda + hyperlink['href']
+						self.check_if_update(chapter_name, chapter_num, url)
+	
+	def find_updates_mangastream(self):
+		webparser = []
+		try:
+			webparser = BeautifulSoup(urllib2.urlopen(self.url_mangastream).read())
+		except:
+			TweetBotLog().write_log('Could not connect to Mangastream')
+		if webparser:
+			for section in webparser('ul', {'class' : 'freshmanga'}):
+				for row in section.findAll('li'):
+					hyperlink = row.a
+					if hyperlink: 
+						chapter_name = re.search('^(.*) (.*)$', hyperlink.string).group(1)
+						chapter_num = re.search('^(.*) (.*)$', hyperlink.string).group(2)
+						url = hyperlink['href']
+						self.check_if_update(chapter_name, chapter_num, url)
+	
+	def check_if_update(self, chapter_name, chapter_num, url):
+		for favorite in TweetBotConfig().get_favorites_list():
+			if chapter_name in favorite and chapter_num > favorite[1]:
+				TwitterAPI().post_update(chapter_name, chapter_num, BitlyAPI().shorten(url))
+				TweetBotConfig().update_favorites_list(chapter_name, chapter_num)				
 							
 class BitlyAPI:
 	def __init__(self):
