@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Copyright (c) 2013, Laurent Dang <dang.laurent@gmail.com>
 # All rights reserved.
 #
@@ -41,57 +43,7 @@ class TweetBotConfig:
 			os.chdir(path)
 		self.config = ConfigParser.ConfigParser(allow_no_value=1)
 		self.config.readfp(open('application.ini', 'a+'))
-		
-	def get_favorites_list(self):
-		list = []
-		for x in self.config.get('Manga', 'list').splitlines():
-			match = re.findall('[a-zA-z0-9 ]* ([0-9].*)', x)
-			chapter_name = x.replace(' ' + match[0], '') if len(match) > 0 else x
-			chapter_num = match[0] if len(match) > 0 else 0
-			list.append([chapter_name, chapter_num])
-		return list
-		
-	def output_manga_list(self, output):
-		self.config.set('Manga', 'list', output)
-		
-		with open('application.ini', 'wb') as file:
-			self.config.write(file)
-		
-	def update_favorites_list(self, chapter_name, chapter_num):
-		favorites_list = self.get_favorites_list()
-		output = '\n'.join(' '.join(str(x) for x in favorite) for favorite in favorites_list)
-		output = re.sub(chapter_name + ' (.*)', chapter_name + ' ' + str(chapter_num), output)
-		self.output_manga_list(output)
-	
-	def add_favorites_list(self, chapter_name):
-		favorites_list = self.get_favorites_list()
-		add_index = self.get_manga_index(chapter_name)
-		if add_index == -1:
-			favorites_list.append([chapter_name, 0])
-			output = '\n'.join(' '.join(str(x) for x in favorite) for favorite in favorites_list)
-			self.output_manga_list(output)
-		else:
-			print chapter_name + " is already in the list"
-	
-	def get_manga_index(self, chapter_name):
-		favorites_list = self.get_favorites_list()
-		index = -1
-		for favorite in favorites_list:
-			if chapter_name in favorite:
-				index = favorites_list.index(favorite)
-				break
-		
-		return index
-	
-	def remove_favorites_list(self, chapter_name):
-		favorites_list = self.get_favorites_list()
-		remove_index = self.get_manga_index(chapter_name)
-		if remove_index >= 0:
-			favorites_list.pop(remove_index)
-			output = '\n'.join(' '.join(str(x) for x in favorite) for favorite in favorites_list)
-			self.output_manga_list(output)
-		else:
-			print chapter_name + " has not been found in the list"
+			
 		
 	def get_twitter_key(self):
 		consumer_key = self.config.get('Twitter', 'consumer key')
@@ -99,9 +51,11 @@ class TweetBotConfig:
 		access_token_key = self.config.get('Twitter', 'access token key')
 		access_token_secret = self.config.get('Twitter', 'access token secret')
 		return consumer_key, consumer_secret, access_token_key, access_token_secret
-		
-	def get_bitly_key(self):
-		return self.config.get('Bitly', 'key')
+	
+	def get_twitter_handle(self, name):
+		if self.config.has_option('TwitterHandlers', name):
+			return self.config.get('TwitterHandlers', name)
+		return name
 		
 class TweetBotLog:
 	def __init__(self):
@@ -154,8 +108,7 @@ class TweetBotApp:
 			print favorite[0] + ' ' + favorite[1]
 			
 	def command_fetch(self, args):
-		#MangaWebParser().find_updates_mangapanda()
-		MangaWebParser().find_updates_mangastream()
+		MangaWebParser().find_updates()
 		
 	def command_remove(self, args):
 		if args.manga_name:
@@ -171,63 +124,88 @@ class TweetBotApp:
 		
 class MangaWebParser:
 	def __init__(self):
-		self.url_mangapanda = 'http://www.mangapanda.com'
-		self.url_mangastream = 'http://www.mangastream.com'
+		self.url_mtlcity = 'http://cuisinederue.org/calendrier-site-de-la-ville/'
 		
-	def find_updates_mangapanda(self):
+	def find_updates(self):
 		webparser = []
 		try:
-			webparser = BeautifulSoup(urllib2.urlopen(self.url_mangapanda).read())
+			webparser = BeautifulSoup(urllib2.urlopen(self.url_mtlcity).read())
 		except:
-			TweetBotLog().write_log('Could not connect to Mangapanda')
+			TweetBotLog().write_log('Could not connect to cuisinederue.org website')
 		if webparser:
-			for section in webparser('table', {'class' : 'updates'}):
-				for row in section.findAll('tr'):
-					hyperlink = row('td')[1].find('a', {'class' : 'chaptersrec'})
-					if hyperlink:
-						chapter_name = row('td')[1].a.strong.string
-						chapter_num = re.search('^/(.*)/(.*)$', hyperlink['href']).group(2)
-						url = self.url_mangapanda + hyperlink['href']
-						self.check_if_update(chapter_name, chapter_num, url)
-	
-	def find_updates_mangastream(self):
-		webparser = []
-		try:
-			webparser = BeautifulSoup(urllib2.urlopen(self.url_mangastream).read())
-		except:
-			TweetBotLog().write_log('Could not connect to Mangastream')
-		if webparser:
-			for section in webparser('ul', {'class' : 'freshmanga'}):
-				for row in section.findAll('li'):
-					hyperlink = row.a
-					if hyperlink: 
-						chapter_name = re.search('^(.*) (.*)$', hyperlink.string).group(1)
-						chapter_num = re.search('^(.*) (.*)$', hyperlink.string).group(2)
-						url = hyperlink['href']
-						self.check_if_update(chapter_name, chapter_num, url)
-	
-	def check_if_update(self, chapter_name, chapter_num, url):
-		for favorite in TweetBotConfig().get_favorites_list():
-			if chapter_name in favorite and chapter_num > favorite[1]:
-				TwitterAPI().post_update(chapter_name, chapter_num, BitlyAPI().shorten(url))
-				TweetBotConfig().update_favorites_list(chapter_name, chapter_num)				
-							
-class BitlyAPI:
-	def __init__(self):
-		key = TweetBotConfig().get_bitly_key()
-		self.api = bitly.Api(login='haeky', apikey=key)
-		
-	def shorten(self, url):
-		return self.api.shorten(url)
+			for section in webparser('table', {'class' : 'evtsmtl'}):
+				# Find table for today
+				heads = section('thead')
+				for head in heads:
+					date = head('th')[0].string
+					if date.find('28') != -1: # We found today
+						# Parsing rows to find venue
+						for row in section.findAll('tr'):
+							for td in row.findAll('td', {'class':'site'}):
+								if td.find('a').string.find('Rue Peel') != -1: # We found the good venue
+									slot = row.findAll('td')
+									am = []
+									noon = []
+									pm = []
+
+									for li in slot[1].findAll('li'):
+										am.append(TweetBotConfig().get_twitter_handle(li.string))
+
+									for li in slot[2].findAll('li'):
+										noon.append(TweetBotConfig().get_twitter_handle(li.string))
+
+									for li in slot[3].findAll('li'):
+										pm.append(TweetBotConfig().get_twitter_handle(li.string))
+
+									# Post to Twitter
+									if am or noon or pm:
+										TwitterAPI().post_update(am, noon, pm)
+									else:
+										TwitterAPI().post_notruck()			
 		
 class TwitterAPI:
 	def __init__(self):
 		consumer_key, consumer_secret, access_token_key, access_token_secret = TweetBotConfig().get_twitter_key()
 		self.twitter = Twitter(auth=OAuth(access_token_key, access_token_secret, consumer_key, consumer_secret))
 		
-	def post_update(self, chapter_name, chapter_num, url):
-		message = chapter_name + ' ' + chapter_num + ' is now out [' + url + ']'
+	def post_update(self, am, noon, pm):
+		message = 'Au menu aujourd\'hui...\n'
+
+		if am:
+			message += '[7h-10h] '
+			for truck in am:
+				message += truck + ' & '
+			message = message[:-3] # Ghetto way to get rid of the last "&""
+			message += '\n'
+		
+		if noon:
+			message += '[11h-14h30] '
+			for truck in noon:
+				message += truck + ' & '
+			message = message[:-3] # Ghetto way to get rid of the last "&""
+			message += '\n'	
+
+		if pm:
+			message += '[17h-22h] '
+			for truck in pm:
+				message += truck + ' & '
+			message = message[:-3] # Ghetto way to get rid of the last "&""
+			message += '\n'
+
+		message += 'Bonne appetit! #etsbouffe'
+
+		message = message.encode('utf-8', 'ignore')
+
+		print message
+
 		self.twitter.statuses.update(status=message)
+
+	def post_notruck(self):
+		message = 'Pas de camion aujourd\'hui :( #etsbouffe'
+
+		print message
+
+		#self.twitter.statuses.update(status=message)
 				
 if __name__ == "__main__":
 	TweetBotApp().run()
