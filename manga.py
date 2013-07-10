@@ -29,7 +29,6 @@ import urllib2
 import re
 import os 
 import oauth2
-import bitly
 import ConfigParser
 import argparse
 from twitter import *
@@ -133,68 +132,60 @@ class MangaWebParser:
 		except:
 			TweetBotLog().write_log('Could not connect to cuisinederue.org website')
 		if webparser:
-			for section in webparser('table', {'class' : 'evtsmtl'}):
-				# Find table for today
-				heads = section('thead')
-				for head in heads:
-					date = head('th')[0].string
-					if date.find('28') != -1: # We found today
-						# Parsing rows to find venue
-						for row in section.findAll('tr'):
-							for td in row.findAll('td', {'class':'site'}):
-								if td.find('a').string.find('Rue Peel') != -1: # We found the good venue
-									slot = row.findAll('td')
-									am = []
-									noon = []
-									pm = []
+			section = webparser('table', {'class' : 'evtsmtl'})[datetime.today().weekday()]
+			# Parsing rows to find venue
+			for row in section.findAll('tr'):
+				for td in row.findAll('td', {'class':'site'}):
+					if td.find('a').string.find('Rue Peel') != -1: # We found the good venue
+						slot = row.findAll('td')
 
-									for li in slot[1].findAll('li'):
-										am.append(TweetBotConfig().get_twitter_handle(li.string))
+						trucks = []
+						am = []
+						noon = []
+						pm = []
+						
+						times = []
+						am_time = '[7h-10h] '
+						noon_time = '[11h-14h30] '
+						pm_time = '[15h-18h] '
 
-									for li in slot[2].findAll('li'):
-										noon.append(TweetBotConfig().get_twitter_handle(li.string))
+						for li in slot[1].findAll('li'):
+							am.append(TweetBotConfig().get_twitter_handle(li.string.encode('utf8')))
+							if am_time not in times: times.append(am_time)
 
-									for li in slot[3].findAll('li'):
-										pm.append(TweetBotConfig().get_twitter_handle(li.string))
+						for li in slot[2].findAll('li'):
+							noon.append(TweetBotConfig().get_twitter_handle(li.string.encode('utf8')))
+							if noon_time not in times: times.append(noon_time)
 
-									# Post to Twitter
-									if am or noon or pm:
-										TwitterAPI().post_update(am, noon, pm)
-									else:
-										TwitterAPI().post_notruck()			
+						for li in slot[3].findAll('li'):
+							pm.append(TweetBotConfig().get_twitter_handle(li.string.encode('utf8')))
+							if pm_time not in times: times.append(pm_time)
+
+						if am: trucks.append(am)
+						if noon: trucks.append(noon)
+						if pm: trucks.append(pm)
+
+						# Post to Twitter
+						if trucks:
+							TwitterAPI().post_update(trucks, times)
+						else:
+							TwitterAPI().post_notruck()			
 		
 class TwitterAPI:
 	def __init__(self):
 		consumer_key, consumer_secret, access_token_key, access_token_secret = TweetBotConfig().get_twitter_key()
 		self.twitter = Twitter(auth=OAuth(access_token_key, access_token_secret, consumer_key, consumer_secret))
 		
-	def post_update(self, am, noon, pm):
+	def post_update(self, trucks, times):
 		message = 'Au menu aujourd\'hui...\n'
 
-		if am:
-			message += '[7h-10h] '
-			for truck in am:
-				message += truck + ' & '
-			message = message[:-3] # Ghetto way to get rid of the last "&""
-			message += '\n'
+		message += '\n'.join(times[idx] + ' & '.join(truck for truck in trucks[idx]) for idx, time in enumerate(times))
 		
-		if noon:
-			message += '[11h-14h30] '
-			for truck in noon:
-				message += truck + ' & '
-			message = message[:-3] # Ghetto way to get rid of the last "&""
-			message += '\n'	
+		if len(message)<140-14:
+			message += '\nBonne appetit!'
 
-		if pm:
-			message += '[17h-22h] '
-			for truck in pm:
-				message += truck + ' & '
-			message = message[:-3] # Ghetto way to get rid of the last "&""
-			message += '\n'
-
-		message += 'Bonne appetit! #etsbouffe'
-
-		message = message.encode('utf-8', 'ignore')
+		if len(message)<140-11:
+			message += ' #etsbouffe';
 
 		print message
 
@@ -205,7 +196,7 @@ class TwitterAPI:
 
 		print message
 
-		#self.twitter.statuses.update(status=message)
+		self.twitter.statuses.update(status=message)
 				
 if __name__ == "__main__":
 	TweetBotApp().run()
