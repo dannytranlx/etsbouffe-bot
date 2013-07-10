@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, Laurent Dang <dang.laurent@gmail.com>
+# Copyright (c) 2013, Laurent Dang <dang.laurent@gmail.com>, forked by Danny Tran <danny@dannytran.ca>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -79,47 +79,18 @@ class TweetBotApp:
 		args.func(args);
 		
 	def build_args(self):
-		parser = argparse.ArgumentParser(description="This is a twitter bot that will tweet when a new chapter comes out")
+		parser = argparse.ArgumentParser(description="This is a twitter bot that will tweet daily the schedule of food truck in front of ÉTS")
 		subparsers = parser.add_subparsers(dest="command", help='Sub-commands help')
-		
-		#List
-		parser_list = subparsers.add_parser('list', help='List all the mangas that are being watched')
-		parser_list.set_defaults(func=self.command_list)
-		
-		#Add
-		parser_add = subparsers.add_parser('add', help='Add a new manga to the watch list')
-		parser_add.add_argument('manga_name', action="store", nargs="?", type=str, help='Name of the manga you want to add to the list')
-		parser_add.set_defaults(func=self.command_add)
-		
+				
 		#Fetch
-		parser_fetch = subparsers.add_parser('fetch', help='Fetch all the updates from mangapanda')
+		parser_fetch = subparsers.add_parser('fetch', help='Fetch all the schedule from cuisinederue.org')
 		parser_fetch.set_defaults(func=self.command_fetch)
-		
-		#Remove
-		parser_remove = subparsers.add_parser('remove', help='Remove a manga from the watch list')
-		parser_remove.add_argument('manga_name', action="store", nargs="?", type=str, help='Name of the manga you want to remove from the list')
-		parser_remove.set_defaults(func=self.command_remove)
+
 		
 		return parser
-		
-	def command_list(self, args):
-		for favorite in TweetBotConfig().get_favorites_list():
-			print favorite[0] + ' ' + favorite[1]
 			
 	def command_fetch(self, args):
 		MangaWebParser().find_updates()
-		
-	def command_remove(self, args):
-		if args.manga_name:
-			TweetBotConfig().remove_favorites_list(args.manga_name)
-		else:
-			print self.argparse.print_help()
-		
-	def command_add(self, args):
-		if args.manga_name:
-			TweetBotConfig().add_favorites_list(args.manga_name)
-		else:
-			print self.argparse.print_help()
 		
 class MangaWebParser:
 	def __init__(self):
@@ -181,8 +152,8 @@ class TwitterAPI:
 
 		message += '\n'.join(times[idx] + ' & '.join(truck for truck in trucks[idx]) for idx, time in enumerate(times))
 		
-		if len(message)<140-14:
-			message += '\nBonne appétit!'
+		if len(message)<140-12:
+			message += '\nBon appétit!'
 
 		if len(message)<140-11:
 			message += ' #etsbouffe';
