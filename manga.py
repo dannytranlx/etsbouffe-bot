@@ -182,7 +182,7 @@ class TwitterAPI:
 		message += '\n'.join(times[idx] + ' & '.join(truck for truck in trucks[idx]) for idx, time in enumerate(times))
 		
 		if len(message)<140-14:
-			message += '\nBonne appetit!'
+			message += '\nBonne appétit!'
 
 		if len(message)<140-11:
 			message += ' #etsbouffe';
