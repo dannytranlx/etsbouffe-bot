@@ -1,14 +1,23 @@
-[Manga]
-List: Naruto
-	Fairy Tail
-	One Piece
-	Bleach
-
 [Twitter]
-Consumer Key: 
-Consumer Secret: 
-Access Token Key: 
-Access Token Secret: 
+consumer key = 
+consumer secret = 
+access token key = 
+access token secret = 
 
-[Bitly]
-Key: 
+[TwitterHandlers]
+Boîte à Fromages = @boiteafromages
+Chaud Dogs = @Chauddogs
+Cuisine Lucky’s Truck = @LuckysTruckMTL
+Gaufrabec = @GAUFRABEC
+Grumman 78 = @Grumman78
+Landry & filles = @landryetfilles
+Le Gourmand Vagabond = @GourmandVagabon
+Le Super Truck = @SuperTruckMTL
+Le Tuktuk = @letuktuk
+Nomade So6 par Accords = @nomadeso6
+P.A. & Gargantua = @pa_gargantua
+Route 27 = @Route27foodtruc
+Roux = @ROUXfoodtruck
+St-Viateur Bagel = @StViateurBagel
+Winneburger = Winneburger (@NouveauPalais)
+Zoe’s = @zoesfoodtruck
