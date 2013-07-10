@@ -1,4 +1,4 @@
-Manga-Tweet-Bot
+ETSBouffe-Tweet-Bot
 =================
 
-This is a twitter bot that will tweet when a new chapter comes out
+This is a twitter bot that will tweet daily the schedule of food truck in front of ÉTS
