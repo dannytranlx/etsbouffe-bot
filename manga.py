@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2013, Laurent Dang <dang.laurent@gmail.com>, forked by Danny Tran <danny@dannytran.ca>
+# Copyright (c) 2013, Laurent Dang <dang.laurent@gmail.com>, forked and modified by Danny Tran <danny@dannytran.ca>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -90,9 +90,9 @@ class TweetBotApp:
 		return parser
 			
 	def command_fetch(self, args):
-		MangaWebParser().find_updates()
+		WebParser().find_updates()
 		
-class MangaWebParser:
+class WebParser:
 	def __init__(self):
 		self.url_mtlcity = 'http://cuisinederue.org/calendrier-site-de-la-ville/'
 		
