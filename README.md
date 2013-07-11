@@ -15,7 +15,7 @@ This script has been set up on a Raspberry Pi with Crontab to run daily at 7am.
 	00 07 * * * python /home/pi/etsbouffe.py fetch
 
 ## Configuration
-Obviously, the web site parsing has been writing to parse that specific table on http://cuisinederue.org/, but the Twitter account can be changed in the [application.ini](../blob/master/application.ini.exemple) file.
+Obviously, the web site parsing has been writing to parse that specific table on http://cuisinederue.org/, but the Twitter account can be changed in the [application.ini](../master/application.ini.exemple) file.
 
 	[Twitter]
 	consumer key = 
@@ -23,7 +23,7 @@ Obviously, the web site parsing has been writing to parse that specific table on
 	access token key = 
 	access token secret = 
 
-Twitter handlers for food trucks can be also updated in [application.ini](../blob/master/application.ini.exemple) under *[TwitterHandlers]*
+Twitter handlers for food trucks can be also updated in [application.ini](../master/application.ini.exemple) under **[TwitterHandlers]**
 
 	[TwitterHandlers]
 	Boîte à Fromages = @boiteafromages
